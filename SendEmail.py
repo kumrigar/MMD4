@@ -6,6 +6,8 @@ import modules
 import os
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics.pairwise import euclidean_distances
 
 sendgrid_api_key = "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"
 
@@ -15,21 +17,22 @@ if not sendgrid_api_key:
 else:
     print(f"API key found: {sendgrid_api_key[:4]}...")  # Print first few characters for verification
 
-# Load the dataset
+'''Loading the dataset. Here, we can either load it from the folder from which you download the application, or from a databse like SQL, 
+ or from any open/public dataset available'''
 try:
     filepath = os.getcwd() + "\\final_data.xlsx"
     data = pd.read_excel(filepath)
 except UnicodeDecodeError as e:
     print(f"UnicodeDecodeError: {e}")
 
-# Read the prompt file
+# Reading dynamic prompts from the prompt engine
 try:
     prompt_file_path = os.getcwd() + "\\prompts.xlsx"
     prompt_data = pd.read_excel(prompt_file_path)
 except UnicodeDecodeError as e:
     print(f"UnicodeDecodeError: {e}")
 
-# Selecting relevant numerical columns from the dataset
+# Selecting relevant columns for generating recommendations for clients.
 selected_columns = ['AnnualSpending', 'ProductUsage', 'FeatureUsage', 'EngagementScore', 'User Management',  'Data Analytics', 'Customer Reports', 'Chatbot', 'Security Alerts',
                     'Performance Monitoring', 'Mobile Access', 'Automated Backups', 'Single Sign On (SSO)',
                     'API Access']
@@ -46,7 +49,7 @@ similarity_matrix = cosine_similarity(interaction_matrix)
 # Convert the similarity matrix to a DataFrame for better readability
 similarity_df = pd.DataFrame(similarity_matrix, index=interaction_matrix.index, columns=interaction_matrix.index)
 
-# Function to get top N similar users using the numerical similarity matrix
+# Function to get top similar users using the numerical similarity matrix
 def get_top_n_similar_users(user_id, n=4):
     similar_users = similarity_df[user_id].sort_values(ascending=False).index[1:n+1]
     return similar_users
@@ -72,19 +75,19 @@ def generate_recommendations_for_all_clients():
         all_recommendations[user_id] = recommendations
     return all_recommendations
 
-# Generate recommendations for all clients
+# Saving the recommendations for further use as required
 all_client_recommendations = generate_recommendations_for_all_clients()
 
-# Convert the recommendations dictionary to a dataframe
-recommendations_df = pd.DataFrame.from_dict(all_client_recommendations, orient='index')
-recommendations_df.reset_index(inplace=True)
+# Convert the recommendations dictionary to a dataframe for easy data retrieval and usage
+recommendations_df = pd.DataFrame.from_dict(all_client_recommendations, orient = 'index')
+recommendations_df.reset_index(inplace = True)
 recommendations_df.columns = ['ClientID'] + [f'Recommendation_{i+1}' for i in range(recommendations_df.shape[1] - 1)]
-# Merge Recommendations with the original data
-final_df = data.merge(recommendations_df, on='ClientID', how='left')
+# Merge Recommendations with the original data file
+final_df = data.merge(recommendations_df, on = 'ClientID', how = 'left')
 # Save the final dataframe to a csv file
-final_df.to_csv('client_recommendations.csv', index=False)
+final_df.to_csv('client_recommendations.csv', index = False)
 
-# Write a function that takes client ID from the client_recommendations file and returns its recommendations
+# A function that takes client ID from the client_recommendations file and returns its feature recommendations
 def get_recommendations(client_id):
     # Load the recommendations from the CSV file
     recommendations_df = pd.read_csv('client_recommendations.csv')
@@ -105,11 +108,11 @@ def get_recommendations(client_id):
     
     return recommendations
 
-# Randomly pick a prompt for email generation from the prompt dataframe and save it in a variable. 
+# Randomly pick a prompt for email generation from the prompt dataframe and return it 
 def get_random_prompt(prompt_data):
-    # Randomly select one row from the prompt_data DataFrame
+    # Randomly select one prompt
     prompt_row = prompt_data.sample(n=1).iloc[0]
-    # Extract the prompt text from the selected row
+    # Extract the actual prompt text 
     random_prompt = prompt_row['prompt_content']
     return random_prompt
 
@@ -139,6 +142,7 @@ def get_personalized_email(client_id, prompt):
     #print(response)
     return response
 
+# Function to send the email 
 def send_email(client_id, prompt):
     # Generate the email content
     email_content = get_personalized_email(client_id, prompt)
@@ -162,6 +166,57 @@ def send_email(client_id, prompt):
     except Exception as e:
         print(f"Failed to send email: {e}")
 
+# Function to get the top 4 peers within the same industry for a specific client. 
+def benchmark_peers(client_id):
+    # Extract the industry of the given ClientID
+    client_industry = data.loc[data['ClientID'] == client_id, 'Industry'].values[0]
+    
+    # Filter the companies in the same industry
+    same_industry_df = data[data['Industry'] == client_industry]
+    
+    # Define the features for benchmarking
+    features = ['User Management', 'Data Analytics', 'API Access', 'Single Sign On (SSO)', 
+                'Automated Backups', 'Performance Monitoring', 'Security Alerts', 
+                'Chatbot', 'Customer Reports', 'Mobile Access', 'CustomerSatisfactionScore', 'ProductUsage']
+    
+    # Extract feature data for the same industry
+    feature_data = same_industry_df[features]
+
+    # Handle missing values by filling them with the mean of the column
+    feature_data = feature_data.fillna(feature_data.mean())
+    
+    # Standardize the feature data
+    scaler = StandardScaler()
+    standardized_data = scaler.fit_transform(feature_data)
+    
+    # Get the index of the client company
+    client_index = same_industry_df.index[same_industry_df['ClientID'] == client_id].tolist()[0]
+    
+    # Compute the Euclidean distances from the client company to all other companies 
+    distances = euclidean_distances([standardized_data[client_index]], standardized_data)[0]
+    
+    # Create a DataFrame with distances
+    distance_df = pd.DataFrame({'ClientID': same_industry_df['ClientID'], 'Distance': distances})
+    
+      # Sort by distance and select the top 2 peers
+    top_peers_ids = distance_df.nsmallest(4, 'Distance')['ClientID']
+    
+    # Select the feature columns and additional columns for the top peers
+    top_peers_details = data.loc[data['ClientID'].isin(top_peers_ids), ['ClientID', 'CompanyName', 'Industry', 'SupportTickets', 'ContractValue'] + features]
+    
+    # Select the feature columns for the client itself
+    client_details = data.loc[data['ClientID'] == client_id, ['ClientID', 'CompanyName', 'Industry', 'SupportTickets', 'ContractValue'] + features]
+    
+    # Combine the client's details with the top peers' details
+    combined_details = pd.concat([client_details, top_peers_details], ignore_index=True)
+    
+
+    # Merge with the original DataFrame to get full details
+    #top_peers_details = pd.merge(top_peers, df, on='ClientID')
+    
+    return combined_details
+
+
 # Example usage
-send_email(7, prompt)
+#send_email(7, prompt)
 #print(get_personalized_email(7, prompt))
