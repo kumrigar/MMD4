@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.metrics.pairwise import cosine_similarity
 import openai
 import modules
@@ -28,7 +30,9 @@ except UnicodeDecodeError as e:
 # Reading dynamic prompts from the prompt engine
 try:
     prompt_file_path = os.getcwd() + "\\prompts.xlsx"
+    prompt_file_path_onboarding = os.getcwd() + "\\onboarding_prompts.xlsx"
     prompt_data = pd.read_excel(prompt_file_path)
+    prompt_data_onboarding = pd.read_excel(prompt_file_path_onboarding)
 except UnicodeDecodeError as e:
     print(f"UnicodeDecodeError: {e}")
 
@@ -108,7 +112,7 @@ def get_recommendations(client_id):
     
     return recommendations
 
-# Randomly pick a prompt for email generation from the prompt dataframe and return it 
+# Randomly pick a prompt for email generation for feature recommendation from the prompt dataframe and return it 
 def get_random_prompt(prompt_data):
     # Randomly select one prompt
     prompt_row = prompt_data.sample(n=1).iloc[0]
@@ -116,9 +120,18 @@ def get_random_prompt(prompt_data):
     random_prompt = prompt_row['prompt_content']
     return random_prompt
 
-prompt = get_random_prompt(prompt_data)
+# # Randomly pick a prompt for email generation for onboarding from the prompt dataframe and return it 
+def get_random_prompt_onboarding(prompt_data):
+    # Randomly select one prompt
+    prompt_row_onboard = prompt_data_onboarding.sample(n=1).iloc[0]
+    # Extract the actual prompt text 
+    random_prompt = prompt_row_onboard['prompt_content']
+    return random_prompt
 
-# Function to create personalized email
+prompt = get_random_prompt(prompt_data)
+prompt_onboard = get_random_prompt_onboarding(prompt_data_onboarding)
+
+# Function to create personalized email for feature recommendations.
 def get_personalized_email(client_id, prompt):
     recomm = get_recommendations(client_id)
     recomm_as_string = ', '.join(map(str, recomm))
@@ -142,7 +155,31 @@ def get_personalized_email(client_id, prompt):
     #print(response)
     return response
 
-# Function to send the email 
+# Function to create personalized email for customers newly onboarded.
+def get_personalized_email_onboard(client_id, prompt_onboard):
+    #recomm = get_recommendations(client_id)
+    #recomm_as_string = ', '.join(map(str, recomm))
+    
+    # Retrieve the client name for the given client ID. Could also retrieve more information as required.
+    client_name = data[data['ClientID'] == client_id]['CompanyName'].values[0]
+    first_name = data[data['ClientID'] == client_id]['FirstName'].values[0]
+    last_name = data[data['ClientID'] == client_id]['LastName'].values[0]
+    contact_person = f"{first_name} {last_name}"
+    sender_name = "Raamesh P Kandalgaonkar"
+    #print(client_name)
+    
+    # Construct final prompt
+    personalized_prompt_onboard = f"""{prompt_onboard}. Use "Dear {contact_person}" to start the email response.
+    Don't add 'Subject' in the email response that is generated as we already have it covered. Consider adequaate spacing between paragraphs. 
+    Refer {client_name} in the email as well whenever you refer to your client. Use objectives. 
+    Our company name will be ARKTech Limited so use that as our company name. Use {sender_name} in the email signature. Make the entire email hyperpersonalized and welcoming."""
+
+    # Get the response
+    response = modules.get_openai_response(personalized_prompt_onboard)
+    #print(response)
+    return response
+
+# Function to send the email for feature recommendation
 def send_email(client_id, prompt):
     # Generate the email content
     email_content = get_personalized_email(client_id, prompt)
@@ -166,57 +203,30 @@ def send_email(client_id, prompt):
     except Exception as e:
         print(f"Failed to send email: {e}")
 
-# Function to get the top 4 peers within the same industry for a specific client. 
-def benchmark_peers(client_id):
-    # Extract the industry of the given ClientID
-    client_industry = data.loc[data['ClientID'] == client_id, 'Industry'].values[0]
-    
-    # Filter the companies in the same industry
-    same_industry_df = data[data['Industry'] == client_industry]
-    
-    # Define the features for benchmarking
-    features = ['User Management', 'Data Analytics', 'API Access', 'Single Sign On (SSO)', 
-                'Automated Backups', 'Performance Monitoring', 'Security Alerts', 
-                'Chatbot', 'Customer Reports', 'Mobile Access', 'CustomerSatisfactionScore', 'ProductUsage']
-    
-    # Extract feature data for the same industry
-    feature_data = same_industry_df[features]
+# Function to send email for new clients being onboarded.
+def send_email_onboard(client_id, prompt_onboard):
+    # Generate the email content
+    email_content_onboard = get_personalized_email_onboard(client_id, prompt_onboard)
 
-    # Handle missing values by filling them with the mean of the column
-    feature_data = feature_data.fillna(feature_data.mean())
-    
-    # Standardize the feature data
-    scaler = StandardScaler()
-    standardized_data = scaler.fit_transform(feature_data)
-    
-    # Get the index of the client company
-    client_index = same_industry_df.index[same_industry_df['ClientID'] == client_id].tolist()[0]
-    
-    # Compute the Euclidean distances from the client company to all other companies 
-    distances = euclidean_distances([standardized_data[client_index]], standardized_data)[0]
-    
-    # Create a DataFrame with distances
-    distance_df = pd.DataFrame({'ClientID': same_industry_df['ClientID'], 'Distance': distances})
-    
-      # Sort by distance and select the top 2 peers
-    top_peers_ids = distance_df.nsmallest(4, 'Distance')['ClientID']
-    
-    # Select the feature columns and additional columns for the top peers
-    top_peers_details = data.loc[data['ClientID'].isin(top_peers_ids), ['ClientID', 'CompanyName', 'Industry', 'SupportTickets', 'ContractValue'] + features]
-    
-    # Select the feature columns for the client itself
-    client_details = data.loc[data['ClientID'] == client_id, ['ClientID', 'CompanyName', 'Industry', 'SupportTickets', 'ContractValue'] + features]
-    
-    # Combine the client's details with the top peers' details
-    combined_details = pd.concat([client_details, top_peers_details], ignore_index=True)
-    
+    # Email configuration
+    sender_email = "kunaal.umrigar@ucdconnect.ie"
+    receiver_email = "raameshkandalgaonkar5@gmail.com"
 
-    # Merge with the original DataFrame to get full details
-    #top_peers_details = pd.merge(top_peers, df, on='ClientID')
-    
-    return combined_details
-
+    # Create the email message
+    message = Mail(
+        from_email=sender_email,
+        to_emails=receiver_email,
+        subject=f"Welcome {data[data['ClientID'] == client_id]['CompanyName'].values[0]}",
+        plain_text_content = email_content_onboard
+    )
+    # Send the email
+    try:
+        sg = SendGridAPIClient(sendgrid_api_key)
+        response = sg.send(message)
+        print(f"Email sent successfully to {receiver_email}, status code: {response.status_code}")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
 
 # Example usage
-#send_email(7, prompt)
+# send_email_onboard(7, prompt_onboard)
 #print(get_personalized_email(7, prompt))
