@@ -22,7 +22,7 @@ else:
 '''Loading the dataset. Here, we can either load it from the folder from which you download the application, or from a databse like SQL, 
  or from any open/public dataset available'''
 try:
-    filepath = os.getcwd() + "\\final_data.xlsx"
+    filepath = os.getcwd() + "\\final_data_1.xlsx"
     data = pd.read_excel(filepath)
 except UnicodeDecodeError as e:
     print(f"UnicodeDecodeError: {e}")
@@ -203,6 +203,28 @@ def send_email(client_id, prompt):
     except Exception as e:
         print(f"Failed to send email: {e}")
 
+def send_email_single_recommendation(client_id, prompt, recommendation):
+    # Generate the email content
+    email_content = single_recommendation_email(client_id, prompt, recommendation)
+
+    # Email configuration
+    sender_email = "kunaal.umrigar@ucdconnect.ie"
+    receiver_email = "raameshkandalgaonkar5@gmail.com"
+
+    # Create the email message
+    message = Mail(
+        from_email=sender_email,
+        to_emails=receiver_email,
+        subject=f"Personalized Recommendation for {data[data['ClientID'] == client_id]['CompanyName'].values[0]}",
+        plain_text_content = email_content
+    )
+    # Send the email
+    try:
+        sg = SendGridAPIClient(sendgrid_api_key)
+        response = sg.send(message)
+        print(f"Email sent successfully to {receiver_email}, status code: {response.status_code}")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
 # Function to send email for new clients being onboarded.
 def send_email_onboard(client_id, prompt_onboard):
     # Generate the email content
@@ -226,6 +248,34 @@ def send_email_onboard(client_id, prompt_onboard):
         print(f"Email sent successfully to {receiver_email}, status code: {response.status_code}")
     except Exception as e:
         print(f"Failed to send email: {e}")
+
+def single_recommendation_email(client_id, prompt, recommendation):
+
+    reco_as_str = str(recommendation)
+    
+    # Retrieve the client name for the given client ID
+    client_name = data[data['ClientID'] == client_id]['CompanyName'].values[0]
+    first_name = data[data['ClientID'] == client_id]['FirstName'].values[0]
+    last_name = data[data['ClientID'] == client_id]['LastName'].values[0]
+    contact_person = f"{first_name} {last_name}"
+    sender_name = "Raamesh P Kandalgaonkar"
+    
+    #Retrieve the primary 3 business objectives of the client
+    interest_priorities = data.loc[data['ClientID'] == client_id, 
+                                   ['Interest Priority_1', 'Interest Priority_2', 'Interest Priority_3']].values[0]
+    interest_priorities_str = ', '.join(interest_priorities)
+
+    # Construct final prompt
+    personalized_prompt = f"""{prompt}. Use "Dear {contact_person}" to start the email response.
+    Don't add 'Subject' in the email response.
+    Refer {client_name} in the email as well whenever you refer to client/customer and use {reco_as_str} as feature recommendation to achieve the business objectives which are {interest_priorities_str}. 
+    Our company name will be ARKTech Limited so use it whenever required. Use {sender_name} in the email signature. Make the entire email hyperpersonalized and engaging. Word limit is 200 words strictly. Simplify the content."""
+
+    response = modules.get_openai_response(personalized_prompt)
+    return response
+
+
+#send_email_single_recommendation(9, prompt, 'Single Sign On (SSO)')
 
 # Example usage
 # send_email_onboard(7, prompt_onboard)
