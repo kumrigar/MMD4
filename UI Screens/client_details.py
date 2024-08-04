@@ -1,9 +1,8 @@
 from flask import Blueprint, render_template_string, session, redirect, url_for, request, flash
 import pandas as pd
 import os
-import openai
+import openai   
 import SendEmail
-
 
 try:
     filepath = os.getcwd() + "/client_recommendations.csv"
@@ -40,9 +39,7 @@ custom_headers = {
 }
 
 prompt = SendEmail.get_random_prompt(prompt_data)
-
 prompt_onboard = SendEmail.get_random_prompt_onboarding(prompt_data_onboarding)
-
 
 @client_details_blueprint.route('/clients/<int:client_id>', methods=['GET', 'POST'])
 def details(client_id):
@@ -58,13 +55,11 @@ def details(client_id):
 
     onboarding_progress = client_info.iloc[0]['OnboardingProgress']
 
-
-    # recipient_subject = 'Automated Task Testing' 
-    # recipient_content = 'Task has been executed successfully.'
-
+    result = False
     if request.method == 'POST':
         if 'recommendation_email' in request.form:
-            result = SendEmail.send_email(client_id, prompt, receiver_email)
+            recommendation = request.form.get('recommendation')
+            result = SendEmail.send_email_single_recommendation(client_id, prompt, receiver_email, recommendation)
 
         elif 'onboarding_email' in request.form:
             result = SendEmail.send_email_onboard(client_id, prompt_onboard, receiver_email)
@@ -77,7 +72,6 @@ def details(client_id):
     recommendation_columns = [col for col in recommendations_data.columns if col.startswith('Recommendation_')]
     client_recommendations = recommendations_data[recommendations_data['ClientID'] == client_id][recommendation_columns].dropna(axis=1, how='all')
 
-
     return render_template_string("""
     <html>
         <head>
@@ -85,7 +79,6 @@ def details(client_id):
             <title> Client Details </title>
         </head>
         <body>
-                                  
             <header>
                 <h2>Client Management System</h2>
                 <nav>
@@ -96,9 +89,8 @@ def details(client_id):
             </header>
             
             <div class="container">
-                                                    
                 <h2> Details for {{ client_info.iloc[0]['CompanyName'] }} </h2>
-                                  
+                
                 {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
                         {% for category, message in messages %}
@@ -106,7 +98,12 @@ def details(client_id):
                         {% endfor %}
                     {% endif %}
                 {% endwith %}
-                                  
+                
+                <div class="btn-container">
+                    <button id="successMetricsButton" style="display:none;" class="btn" onclick="window.location.href='{{ url_for('success_metrics.success_metrics', client_id=client_id) }}'">Success Metrics</button>
+                    <button id="closeButton" style="display:none;" class="close-btn" onclick="hideSuccessMetricsButton()">X</button>
+                </div>
+                
                 <table>
                     <tr>
                         <th>Information</th>
@@ -123,21 +120,24 @@ def details(client_id):
                 {% if onboarding_progress == 'Completed' %}
                     <div class="recommendations">
                         <h2>Recommendations</h2>
-                        <ul>
+                        <table>
+                            <tr>
+                                <th>Recommendation</th>
+                                <th>Action</th>
+                            </tr>
                             {% for col in client_recommendations.columns %}
-                            <li>
-                                {{ client_recommendations.iloc[0][col] }}
-                                <form method="post" style="display: inline;">
-                                    <input type="hidden" name="recommendation" value="{{ client_recommendations.iloc[0][col] }}">
-                                    <input type="submit" name="recommendation_email" value="Automate Email" class="btn">
-                                </form>
-                            </li>
+                            <tr>
+                                <td>{{ client_recommendations.iloc[0][col] }}</td>
+                                <td>
+                                    <form method="post" style="display: inline;">
+                                        <input type="hidden" name="recommendation" value="{{ client_recommendations.iloc[0][col] }}">
+                                        <input type="submit" name="recommendation_email" value="Automate Email" class="btn">
+                                    </form>
+                                </td>
+                            </tr>
                             {% endfor %}
-                        </ul>
+                        </table>
                     </div>
-                    <form method="post">
-                        <input type="submit" name="recommendation_email" value="Automate Email" class="btn">
-                    </form>
                 {% else %}
                     <div class="onboarding">
                         <h3>Onboarding is in progress</h3>
@@ -147,16 +147,8 @@ def details(client_id):
                     </form>
                 {% endif %}
             </div>
-            <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    setTimeout(function() {
-                        var flashMessages = document.querySelectorAll('.flash-message');
-                        flashMessages.forEach(function(message) {
-                            message.style.display = 'none';
-                        });
-                    }, 8000); // Adjust time as needed (8000ms = 8 seconds)
-                });
-            </script>
+            
+            <script src="{{ url_for('static', filename='scripts.js') }}"></script>
         </body>
     </html>
-    """, client_info=client_info, custom_headers=custom_headers, client_recommendations=client_recommendations, onboarding_progress=onboarding_progress)
+    """, client_info=client_info, custom_headers=custom_headers, client_recommendations=client_recommendations, onboarding_progress=onboarding_progress, client_id=client_id)

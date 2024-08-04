@@ -50,9 +50,11 @@ def dashboard():
                     <a href="{{ url_for('logout.logout') }}">Logout</a>
                 </nav>
             </header>
-            <h1>Customer Satisfaction Trends</h1>
-            <div class="trend-chart">
-                <img src="{{ url_for('static', filename='satisfaction_trend.png') }}" alt="Customer Satisfaction Trend">
+            <div class="container">
+                <h1>Customer Satisfaction Trends</h1>
+                <div class="trend-chart">
+                    <img src="{{ url_for('static', filename='satisfaction_trend.png') }}" alt="Customer Satisfaction Trend">
+                </div>
             </div>
         </body>
     </html>
