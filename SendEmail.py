@@ -1,15 +1,11 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn.metrics.pairwise import cosine_similarity
 import openai
 import modules
 import os
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics.pairwise import euclidean_distances
 
 sendgrid_api_key = "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"
 
@@ -19,24 +15,23 @@ if not sendgrid_api_key:
 else:
     print(f"API key found: {sendgrid_api_key[:4]}...")  # Print first few characters for verification
 
-'''Loading the dataset. Here, we can either load it from the folder from which you download the application, or from a databse like SQL, 
- or from any open/public dataset available'''
+# Load the dataset
 try:
-    filepath = os.getcwd() + "\\final_data_1.xlsx"
+    filepath = os.getcwd() + "/final_data.xlsx"
     data = pd.read_excel(filepath)
 except UnicodeDecodeError as e:
     print(f"UnicodeDecodeError: {e}")
 
 # Reading dynamic prompts from the prompt engine
 try:
-    prompt_file_path = os.getcwd() + "\\prompts.xlsx"
-    prompt_file_path_onboarding = os.getcwd() + "\\onboarding_prompts.xlsx"
+    prompt_file_path = os.getcwd() + "/prompts.xlsx"
+    prompt_file_path_onboarding = os.getcwd() + "/onboarding_prompts.xlsx"
     prompt_data = pd.read_excel(prompt_file_path)
     prompt_data_onboarding = pd.read_excel(prompt_file_path_onboarding)
 except UnicodeDecodeError as e:
     print(f"UnicodeDecodeError: {e}")
 
-# Selecting relevant columns for generating recommendations for clients.
+# Selecting relevant numerical columns from the dataset
 selected_columns = ['AnnualSpending', 'ProductUsage', 'FeatureUsage', 'EngagementScore', 'User Management',  'Data Analytics', 'Customer Reports', 'Chatbot', 'Security Alerts',
                     'Performance Monitoring', 'Mobile Access', 'Automated Backups', 'Single Sign On (SSO)',
                     'API Access']
@@ -53,7 +48,7 @@ similarity_matrix = cosine_similarity(interaction_matrix)
 # Convert the similarity matrix to a DataFrame for better readability
 similarity_df = pd.DataFrame(similarity_matrix, index=interaction_matrix.index, columns=interaction_matrix.index)
 
-# Function to get top similar users using the numerical similarity matrix
+# Function to get top N similar users using the numerical similarity matrix
 def get_top_n_similar_users(user_id, n=4):
     similar_users = similarity_df[user_id].sort_values(ascending=False).index[1:n+1]
     return similar_users
@@ -79,19 +74,19 @@ def generate_recommendations_for_all_clients():
         all_recommendations[user_id] = recommendations
     return all_recommendations
 
-# Saving the recommendations for further use as required
+# Generate recommendations for all clients
 all_client_recommendations = generate_recommendations_for_all_clients()
 
-# Convert the recommendations dictionary to a dataframe for easy data retrieval and usage
-recommendations_df = pd.DataFrame.from_dict(all_client_recommendations, orient = 'index')
-recommendations_df.reset_index(inplace = True)
+# Convert the recommendations dictionary to a dataframe
+recommendations_df = pd.DataFrame.from_dict(all_client_recommendations, orient='index')
+recommendations_df.reset_index(inplace=True)
 recommendations_df.columns = ['ClientID'] + [f'Recommendation_{i+1}' for i in range(recommendations_df.shape[1] - 1)]
-# Merge Recommendations with the original data file
-final_df = data.merge(recommendations_df, on = 'ClientID', how = 'left')
+# Merge Recommendations with the original data
+final_df = data.merge(recommendations_df, on='ClientID', how='left')
 # Save the final dataframe to a csv file
-final_df.to_csv('client_recommendations.csv', index = False)
+final_df.to_csv('client_recommendations.csv', index=False)
 
-# A function that takes client ID from the client_recommendations file and returns its feature recommendations
+# Write a function that takes client ID from the client_recommendations file and returns its recommendations
 def get_recommendations(client_id):
     # Load the recommendations from the CSV file
     recommendations_df = pd.read_csv('client_recommendations.csv')
@@ -112,16 +107,17 @@ def get_recommendations(client_id):
     
     return recommendations
 
-# Randomly pick a prompt for email generation for feature recommendation from the prompt dataframe and return it 
+# Randomly pick a prompt for email generation from the prompt dataframe and save it in a variable. 
 def get_random_prompt(prompt_data):
-    # Randomly select one prompt
+    # Randomly select one row from the prompt_data DataFrame
     prompt_row = prompt_data.sample(n=1).iloc[0]
-    # Extract the actual prompt text 
+    # Extract the prompt text from the selected row
     random_prompt = prompt_row['prompt_content']
     return random_prompt
 
-# # Randomly pick a prompt for email generation for onboarding from the prompt dataframe and return it 
-def get_random_prompt_onboarding(prompt_data):
+prompt = get_random_prompt(prompt_data)
+
+def get_random_prompt_onboarding(prompt_data_onboarding):
     # Randomly select one prompt
     prompt_row_onboard = prompt_data_onboarding.sample(n=1).iloc[0]
     # Extract the actual prompt text 
@@ -131,7 +127,7 @@ def get_random_prompt_onboarding(prompt_data):
 prompt = get_random_prompt(prompt_data)
 prompt_onboard = get_random_prompt_onboarding(prompt_data_onboarding)
 
-# Function to create personalized email for feature recommendations.
+# Function to create personalized email
 def get_personalized_email(client_id, prompt):
     recomm = get_recommendations(client_id)
     recomm_as_string = ', '.join(map(str, recomm))
@@ -154,6 +150,34 @@ def get_personalized_email(client_id, prompt):
     response = modules.get_openai_response(personalized_prompt)
     #print(response)
     return response
+
+def send_email(client_id, prompt, receiver_email):
+    
+    email_content = get_personalized_email(client_id, prompt)
+
+    # Email configuration
+    sender_email = "kunaal.umrigar@ucdconnect.ie"
+    #receiver_email = "raameshkandalgaonkar5@gmail.com"
+
+    # Create the email message
+    message = Mail(
+        from_email=sender_email,
+        to_emails=receiver_email,
+        subject=f"Personalized Recommendations for {data[data['ClientID'] == client_id]['CompanyName'].values[0]}",
+        plain_text_content = email_content
+    )
+    try:
+        sg = SendGridAPIClient(sendgrid_api_key)
+        response = sg.send(message)
+        if response.status_code == 202:
+            print(f"Email sent successfully to {receiver_email}, status code: {response.status_code}")
+            return True
+        else:
+            print(f"Failed to send email, status code: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+        return False
 
 # Function to create personalized email for customers newly onboarded.
 def get_personalized_email_onboard(client_id, prompt_onboard):
@@ -179,60 +203,14 @@ def get_personalized_email_onboard(client_id, prompt_onboard):
     #print(response)
     return response
 
-# Function to send the email for feature recommendation
-def send_email(client_id, prompt):
-    # Generate the email content
-    email_content = get_personalized_email(client_id, prompt)
-
-    # Email configuration
-    sender_email = "kunaal.umrigar@ucdconnect.ie"
-    receiver_email = "raameshkandalgaonkar5@gmail.com"
-
-    # Create the email message
-    message = Mail(
-        from_email=sender_email,
-        to_emails=receiver_email,
-        subject=f"Personalized Recommendations for {data[data['ClientID'] == client_id]['CompanyName'].values[0]}",
-        plain_text_content = email_content
-    )
-    # Send the email
-    try:
-        sg = SendGridAPIClient(sendgrid_api_key)
-        response = sg.send(message)
-        print(f"Email sent successfully to {receiver_email}, status code: {response.status_code}")
-    except Exception as e:
-        print(f"Failed to send email: {e}")
-
-def send_email_single_recommendation(client_id, prompt, recommendation):
-    # Generate the email content
-    email_content = single_recommendation_email(client_id, prompt, recommendation)
-
-    # Email configuration
-    sender_email = "kunaal.umrigar@ucdconnect.ie"
-    receiver_email = "raameshkandalgaonkar5@gmail.com"
-
-    # Create the email message
-    message = Mail(
-        from_email=sender_email,
-        to_emails=receiver_email,
-        subject=f"Personalized Recommendation for {data[data['ClientID'] == client_id]['CompanyName'].values[0]}",
-        plain_text_content = email_content
-    )
-    # Send the email
-    try:
-        sg = SendGridAPIClient(sendgrid_api_key)
-        response = sg.send(message)
-        print(f"Email sent successfully to {receiver_email}, status code: {response.status_code}")
-    except Exception as e:
-        print(f"Failed to send email: {e}")
 # Function to send email for new clients being onboarded.
-def send_email_onboard(client_id, prompt_onboard):
+def send_email_onboard(client_id, prompt_onboard, receiver_email):
     # Generate the email content
     email_content_onboard = get_personalized_email_onboard(client_id, prompt_onboard)
 
     # Email configuration
     sender_email = "kunaal.umrigar@ucdconnect.ie"
-    receiver_email = "raameshkandalgaonkar5@gmail.com"
+    #receiver_email = "raameshkandalgaonkar5@gmail.com"
 
     # Create the email message
     message = Mail(
@@ -245,9 +223,44 @@ def send_email_onboard(client_id, prompt_onboard):
     try:
         sg = SendGridAPIClient(sendgrid_api_key)
         response = sg.send(message)
-        print(f"Email sent successfully to {receiver_email}, status code: {response.status_code}")
+        if response.status_code == 202:
+            print(f"Email sent successfully to {receiver_email}, status code: {response.status_code}")
+            return True
+        else:
+            print(f"Failed to send email, status code: {response.status_code}")
+            return False
     except Exception as e:
         print(f"Failed to send email: {e}")
+        return False
+
+def send_email_single_recommendation(client_id, prompt, receiver_email, recommendation):
+    # Generate the email content
+    email_content = single_recommendation_email(client_id, prompt, recommendation)
+
+    # Email configuration
+    sender_email = "kunaal.umrigar@ucdconnect.ie"
+    #receiver_email = "raameshkandalgaonkar5@gmail.com"
+
+    # Create the email message
+    message = Mail(
+        from_email=sender_email,
+        to_emails=receiver_email,
+        subject=f"Personalized Recommendation for {data[data['ClientID'] == client_id]['CompanyName'].values[0]}",
+        plain_text_content = email_content
+    )
+    # Send the email
+    try:
+        sg = SendGridAPIClient(sendgrid_api_key)
+        response = sg.send(message)
+        if response.status_code == 202:
+            print(f"Email sent successfully to {receiver_email} for {recommendation}, status code: {response.status_code}")
+            return True
+        else:
+            print(f"Failed to send email, status code: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+        return False
 
 def single_recommendation_email(client_id, prompt, recommendation):
 
@@ -273,10 +286,3 @@ def single_recommendation_email(client_id, prompt, recommendation):
 
     response = modules.get_openai_response(personalized_prompt)
     return response
-
-
-#send_email_single_recommendation(9, prompt, 'Single Sign On (SSO)')
-
-# Example usage
-# send_email_onboard(7, prompt_onboard)
-#print(get_personalized_email(7, prompt))
