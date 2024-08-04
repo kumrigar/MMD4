@@ -3,7 +3,6 @@ body {
     margin: 0;
     padding: 0;
     color: #333;
-    background-color: #f8f9fa;
 }
 
 header {
@@ -68,7 +67,6 @@ tr:hover {
     border-radius: 4px;
     text-decoration: none;
     cursor: pointer;
-    margin-top: 10px;
     transition: background-color 0.3s ease;
 }
 
@@ -138,7 +136,7 @@ tr:hover {
 }
 
 .tier-buttons-container {
-    margin-bottom: 20px; /* Space between buttons and table */
+    margin-bottom: 20px; 
 }
 
 form {
@@ -164,3 +162,28 @@ select:focus {
     outline: none;
 }
 
+.close-btn {
+    font-size: 20px;
+    font-weight: bold;
+    color: white;
+    background-color: #f44336;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+    padding: 0;
+}
+.close-btn:hover {
+    background-color: #d32f2f;
+}
+.btn-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
