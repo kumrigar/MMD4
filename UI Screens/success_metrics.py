@@ -8,7 +8,7 @@ try:
 except UnicodeDecodeError as e:
     print(f"UnicodeDecodeError: {e}")
 
-print(data.columns)
+#print(data.columns)
 
 success_metrics_blueprint = Blueprint('success_metrics', __name__)
 
@@ -26,7 +26,10 @@ def success_metrics(client_id):
         </head>
         <body>
             <header>
-                <h2>Client Management System</h2>
+                <div class="header-logo">
+                    <img src="{{ url_for('static', filename='marketing-automation.png') }}" class="nav-logo" alt="Logo">
+                    <h2>Autoark.ai</h2>
+                </div>
                 <nav>
                     <a href="{{ url_for('home.home') }}">Home</a>
                     <a href="{{ url_for('client_dashboard.dashboard') }}">Dashboard</a>
