@@ -69,7 +69,6 @@ def benchmark_peers(data, client_id):
     
     # Define the features for benchmarking
     features = ['User Management', 'Data Analytics', 'API Access', 'Single Sign On (SSO)', 
-                'Automated Backups', 'Performance Monitoring', 'Security Alerts', 
                 'Chatbot', 'Customer Reports', 'Mobile Access', 'CustomerSatisfactionScore', 'ProductUsage']
     
     # Extract feature data for the same industry
@@ -104,7 +103,6 @@ def benchmark_peers(data, client_id):
     combined_details = pd.concat([client_details, top_peers_details], ignore_index=True)
     combined_details.to_csv('peers.csv', index = False)
     return combined_details
-
 
 
 

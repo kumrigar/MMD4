@@ -137,7 +137,7 @@ def get_personalized_email(client_id, prompt):
     first_name = data[data['ClientID'] == client_id]['FirstName'].values[0]
     last_name = data[data['ClientID'] == client_id]['LastName'].values[0]
     contact_person = f"{first_name} {last_name}"
-    sender_name = "Raamesh P Kandalgaonkar"
+    sender_name = "Kunaal Umrigar"
     print(client_name)
     
     # Construct final prompt
@@ -189,7 +189,7 @@ def get_personalized_email_onboard(client_id, prompt_onboard):
     first_name = data[data['ClientID'] == client_id]['FirstName'].values[0]
     last_name = data[data['ClientID'] == client_id]['LastName'].values[0]
     contact_person = f"{first_name} {last_name}"
-    sender_name = "Raamesh P Kandalgaonkar"
+    sender_name = "Kunaal Umrigar"
     #print(client_name)
     
     # Construct final prompt
@@ -271,7 +271,7 @@ def single_recommendation_email(client_id, prompt, recommendation):
     first_name = data[data['ClientID'] == client_id]['FirstName'].values[0]
     last_name = data[data['ClientID'] == client_id]['LastName'].values[0]
     contact_person = f"{first_name} {last_name}"
-    sender_name = "Raamesh P Kandalgaonkar"
+    sender_name = "Kunaal Umrigar"
     
     #Retrieve the primary 3 business objectives of the client
     interest_priorities = data.loc[data['ClientID'] == client_id, 
