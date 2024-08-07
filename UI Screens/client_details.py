@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template_string, session, redirect, url_for, request, flash
+from modules import benchmark_peers
 import pandas as pd
 import os
 import openai   
@@ -72,6 +73,8 @@ def details(client_id):
     recommendation_columns = [col for col in recommendations_data.columns if col.startswith('Recommendation_')]
     client_recommendations = recommendations_data[recommendations_data['ClientID'] == client_id][recommendation_columns].dropna(axis=1, how='all')
 
+    benchmark_data = benchmark_peers(data, client_id)
+
     return render_template_string("""
     <html>
         <head>
@@ -80,7 +83,10 @@ def details(client_id):
         </head>
         <body>
             <header>
-                <h2>Client Management System</h2>
+                <div class="header-logo">
+                    <img src="{{ url_for('static', filename='marketing-automation.png') }}" class="nav-logo" alt="Logo">
+                    <h2>Autoark.ai</h2>
+                </div>
                 <nav>
                     <a href="{{ url_for('home.home') }}">Home</a>
                     <a href="{{ url_for('client_dashboard.dashboard') }}">Dashboard</a>
@@ -113,6 +119,33 @@ def details(client_id):
                     <tr>
                         <td>{{ custom_headers[col] }}</td>
                         <td>{{ client_info.iloc[0][col] }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                
+                <h2>Industry Benchmark Information</h2>
+                <table>
+                    <tr>
+                        <th>Client ID</th>
+                        <th>Company Name</th>
+                        <th>Industry</th>
+                        <th>Support Tickets</th>
+                        <th>Contract Value</th>
+                        <th>User Management</th>
+                        <th>Data Analytics</th>
+                        <th>API Access</th>
+                        <th>Single Sign On (SSO)</th>
+                        <th>Chatbot</th>
+                        <th>Customer Reports</th>
+                        <th>Mobile Access</th>
+                        <th>Customer Satisfaction Score</th>
+                        <th>Product Usage</th>
+                    </tr>
+                    {% for _, row in benchmark_data.iterrows() %}
+                    <tr>
+                        {% for col in row.index %}
+                        <td>{{ row[col] }}</td>
+                        {% endfor %}
                     </tr>
                     {% endfor %}
                 </table>
@@ -151,4 +184,4 @@ def details(client_id):
             <script src="{{ url_for('static', filename='scripts.js') }}"></script>
         </body>
     </html>
-    """, client_info=client_info, custom_headers=custom_headers, client_recommendations=client_recommendations, onboarding_progress=onboarding_progress, client_id=client_id)
+    """, client_info=client_info, custom_headers=custom_headers, client_recommendations=client_recommendations, onboarding_progress=onboarding_progress, client_id=client_id, benchmark_data=benchmark_data)

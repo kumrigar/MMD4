@@ -1,61 +1,50 @@
-import matplotlib
-matplotlib.use('Agg')  # Use the non-GUI backend 'Agg' for rendering plots
-
+from flask import Flask, Blueprint, request, render_template_string, session, redirect, url_for
 import matplotlib.pyplot as plt
-from flask import Blueprint, render_template_string
+import seaborn as sns
 import pandas as pd
 import os
 
+app = Flask(__name__)
+app.secret_key = 'your_secret_key'
+
 client_dashboard_blueprint = Blueprint('client_dashboard', __name__)
-
-# Load the data
-try:
-    file_path = os.getcwd() + "/final_data.xlsx"
-    data = pd.read_excel(file_path)
-except UnicodeDecodeError as e:
-    print(f"UnicodeDecodeError: {e}")
-
-def create_satisfaction_trend_plot(data):
-    plt.figure(figsize=(10, 6))
-    # Example plot: customer satisfaction by customer tier
-    data.groupby('customer_tier')['CustomerSatisfactionScore'].mean().plot(kind='bar')
-    plt.title('Average Customer Satisfaction Score by Customer Tier')
-    plt.xlabel('Customer Tier')
-    plt.ylabel('Average Satisfaction Score')
-    plt.tight_layout()
-    static_dir = os.path.join(os.getcwd(), 'static')
-    if not os.path.exists(static_dir):
-        os.makedirs(static_dir)
-    plot_path = os.path.join(static_dir, 'satisfaction_trend.png')
-    plt.savefig(plot_path)
-    plt.close()
-    return plot_path
 
 @client_dashboard_blueprint.route('/dashboard')
 def dashboard():
-    # Generate the satisfaction trend plot
-    plot_path = create_satisfaction_trend_plot(data)
+    # Assume data loading and plot generation are handled elsewhere
+    plot_path = 'combined_plot.png'  # This should be the path to the saved plot image in static folder
+    cluster_image_path = 'Cluster.png'  # Ensure this is in your static folder
     
     return render_template_string("""
     <html>
         <head>
-            <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">               
+            <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
             <title>Client Dashboard</title>
         </head>
         <body>
             <header>
-                <h2>Client Management System</h2>
+                <div class="header-logo">
+                    <img src="{{ url_for('static', filename='marketing-automation.png') }}" class="nav-logo" alt="Logo">
+                    <h2>Autoark.ai</h2>
+                </div>
                 <nav>
                     <a href="{{ url_for('home.home') }}">Home</a>
                     <a href="{{ url_for('logout.logout') }}">Logout</a>
                 </nav>
             </header>
+            
             <div class="container">
-                <h1>Customer Satisfaction Trends</h1>
+                <h1>Customer Trends</h1>
                 <div class="trend-chart">
-                    <img src="{{ url_for('static', filename='satisfaction_trend.png') }}" alt="Customer Satisfaction Trend">
+                    <img src="{{ url_for('static', filename=plot_path) }}" alt="Combined Plots">
+                    <img src="{{ url_for('static', filename=cluster_image_path) }}" alt="Cluster Analysis">
                 </div>
             </div>
         </body>
     </html>
-    """)
+    """, plot_path=plot_path, cluster_image_path=cluster_image_path)
+
+app.register_blueprint(client_dashboard_blueprint, url_prefix='/dashboard')
+
+if __name__ == '__main__':
+    app.run(debug=True)

@@ -30,9 +30,16 @@ def home():
         # Get the selected customer tier from the request arguments
         selected_tier = request.args.get('tier', None)
 
+        # Get the search query from the request arguments
+        search_query = request.args.get('search', '')
+
         # Filter data based on the selected customer tier
         if selected_tier:
             filtered_data = filtered_data[filtered_data['customer_tier'] == selected_tier]
+
+        # Filter data based on the search query
+        if search_query:
+            filtered_data = filtered_data[filtered_data['CompanyName'].str.contains(search_query, case=False, na=False)]
 
         # Get unique customer tiers for dropdown options
         customer_tiers = data['customer_tier'].unique()
@@ -45,7 +52,10 @@ def home():
             </head>
             <body>
                 <header>
-                    <h2>Client Management System</h2>
+                    <div class="header-logo">
+                        <img src="{{ url_for('static', filename='marketing-automation.png') }}" class="nav-logo" alt="Logo">
+                        <h2>Autoark.ai</h2>
+                    </div>
                     <nav>
                         <a href="{{ url_for('client_dashboard.dashboard') }}">Dashboard</a>
                         <a href="{{ url_for('logout.logout') }}">Logout</a>
@@ -61,6 +71,9 @@ def home():
                                 <option value="{{ tier }}" {% if selected_tier == tier %}selected{% endif %}>{{ tier }} Customers</option>
                             {% endfor %}
                         </select>
+                        <label for="search-input">Search by Company Name:</label>
+                        <input type="text" id="search-input" name="search" value="{{ search_query }}" placeholder="Search...">
+                        <button type="submit">Search</button>
                     </form>
                     <table>
                         <tr>
@@ -81,6 +94,6 @@ def home():
                 </div>
             </body>
         </html>
-        """, filtered_data=filtered_data, custom_headers=custom_headers, display_columns=display_columns, customer_tiers=customer_tiers, selected_tier=selected_tier)
+        """, filtered_data=filtered_data, custom_headers=custom_headers, display_columns=display_columns, customer_tiers=customer_tiers, selected_tier=selected_tier, search_query=search_query)
     else:
         return redirect(url_for('login.login'))
