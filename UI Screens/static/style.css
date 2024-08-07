@@ -6,9 +6,9 @@ body {
 }
 
 header {
-    background-color: #4CAF50;
+    background-color: #0F2143;
     color: white;
-    padding: 15px 20px;
+    padding: 25px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -26,12 +26,27 @@ nav a {
     margin: 0 10px;
     padding: 10px;
     border-radius: 5px;
-    background-color: #4CAF50;
+    background-color: #0F2143;
     transition: background-color 0.3s ease;
 }
 
 nav a:hover {
-    background-color: #45a049;
+    background-color: #0c1a36;
+}
+
+.nav-logo {
+    width: 35px;
+    height: 35px;
+    filter: brightness(0) invert(1); /* Change the color to white */
+    vertical-align: middle;
+    margin-right: 5px;
+}
+.header-logo {
+    display: flex;
+    align-items: center;
+}
+.header-logo img {
+    margin-right: 10px;
 }
 
 .container {
@@ -62,7 +77,7 @@ tr:hover {
     display: inline-block;
     padding: 10px 20px;
     color: white;
-    background-color: #4CAF50;
+    background-color: #0F2143;
     border: none;
     border-radius: 4px;
     text-decoration: none;
@@ -71,7 +86,7 @@ tr:hover {
 }
 
 .btn:hover {
-    background-color: #45a049;
+    background-color: #0c1a36;
 }
 
 .flash-message {
@@ -108,7 +123,7 @@ tr:hover {
 
 .logout-btn {
     padding: 10px 20px;
-    background-color: #4CAF50;
+    background-color: #0F2143;
     color: white;
     border: none;
     border-radius: 5px;
@@ -119,7 +134,7 @@ tr:hover {
 
 .tier-btn {
     padding: 8px 12px;
-    background-color: #4CAF50;
+    background-color: #0F2143;
     color: #fff;
     border: none;
     border-radius: 4px;
@@ -132,7 +147,7 @@ tr:hover {
 }
 
 .tier-btn:hover {
-    background-color: #45a049;
+    background-color: #0c1a36;
 }
 
 .tier-buttons-container {
@@ -186,4 +201,33 @@ select:focus {
     align-items: center;
     gap: 10px;
     margin-bottom: 10px;
+}
+
+select, input[type="text"] {
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    transition: border-color 0.3s ease;
+    margin-right: 10px;
+}
+
+select:focus, input[type="text"]:focus {
+    border-color: #4CAF50;
+    outline: none;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    color: white;
+    background-color: #0F2143;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #0F2143;
 }
