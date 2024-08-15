@@ -27,21 +27,16 @@ def home():
         display_columns = list(custom_headers.keys())
         filtered_data = data[display_columns + ['customer_tier']]
 
-        # Get the selected customer tier from the request arguments
         selected_tier = request.args.get('tier', None)
 
-        # Get the search query from the request arguments
         search_query = request.args.get('search', '')
 
-        # Filter data based on the selected customer tier
         if selected_tier:
             filtered_data = filtered_data[filtered_data['customer_tier'] == selected_tier]
 
-        # Filter data based on the search query
         if search_query:
             filtered_data = filtered_data[filtered_data['CompanyName'].str.contains(search_query, case=False, na=False)]
 
-        # Get unique customer tiers for dropdown options
         customer_tiers = data['customer_tier'].unique()
 
         return render_template_string("""

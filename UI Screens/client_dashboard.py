@@ -11,9 +11,9 @@ client_dashboard_blueprint = Blueprint('client_dashboard', __name__)
 
 @client_dashboard_blueprint.route('/dashboard')
 def dashboard():
-    # Assume data loading and plot generation are handled elsewhere
-    plot_path = 'combined_plot.png'  # This should be the path to the saved plot image in static folder
-    cluster_image_path = 'Cluster.png'  # Ensure this is in your static folder
+    
+    plot_path = 'combined_plot.png'  
+    cluster_image_path = 'Cluster.png'
     
     return render_template_string("""
     <html>
