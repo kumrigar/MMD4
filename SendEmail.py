@@ -7,7 +7,7 @@ import os
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
-sendgrid_api_key = "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"
+sendgrid_api_key = "Your API Key" 
 
 if not sendgrid_api_key:
     print("API key not found. Please ensure it is set in the .env file.")

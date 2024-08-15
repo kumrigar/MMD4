@@ -6,14 +6,14 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics.pairwise import euclidean_distances
 
 def get_openai_response(prompt):
-    openai.api_key = 'sk-proj-f8bL6T3zc8airViV5XzcT3BlbkFJWOKimruuQDk3UPOu3zfy'  # Replace with your OpenAI API key
+    openai.api_key = 'Your API Key'  
     response = openai.chat.completions.create(
-        model="gpt-3.5-turbo",  # Using a chat-based model
+        model="gpt-3.5-turbo",  
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": prompt}
         ],
-        max_tokens = 500  # Adjust the token count as needed
+        max_tokens = 500 
     )
     return response.choices[0].message.content
 
@@ -28,7 +28,6 @@ def get_random_prompt(prompt_data):
 # Function to give industry specific insights of the clients managed by the CSM
 def industry_analysis(data):
     industry_group = data.groupby('Industry')[['AnnualSpending', 'CustomerSatisfactionScore', 'RenewalRate', 'NPS', 'ContractValue', 'EngagementScore']].mean().reset_index()
-    #print("\nIndustry Segmentation Analysis:")
     return(industry_group)
 
 # Function to plot trendlines for a set of factors that go as 'pairs'
