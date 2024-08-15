@@ -148,7 +148,7 @@ def get_personalized_email(client_id, prompt):
 
     # Get the response
     response = modules.get_openai_response(personalized_prompt)
-    #print(response)
+    print(response)
     return response
 
 def send_email(client_id, prompt, receiver_email):
